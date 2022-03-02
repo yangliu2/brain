@@ -12,7 +12,7 @@ The first thought is to go to the [Wikipedia download page
 ](https://en.wikipedia.org/wiki/Wikipedia:Database_download).
 
 So I have go to the XML files, and follow instructions provided by [this source
-](https://stackoverflow.com/questions/40384864/importing-wikipedia-dump-to-mysql).
+](https://www.joe0.com/2013/09/30/how-to-create-mysql-database-out-of-wikipedia-xml-dump-enwiki-latest-pages-articles-multistream-xml/).
 
 Basically, we need to use a tool called MWDumper, that will convert XML into 
 SQL scripts. We can download the compile [java here

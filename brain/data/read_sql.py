@@ -7,10 +7,12 @@ class Database:
     def __init__(self,
                  host: str = "localhost",
                  user: str = "root",
-                 password: str = "example"):
+                 password: str = "example",
+                 database: str = "test"):
         self.conn = mysqlConnector.connect(host=host,
                                            user=user,
-                                           passwd=password,)
+                                           passwd=password,
+                                           database=database)
 
          # Checking if connection is made or not
         if self.conn:
