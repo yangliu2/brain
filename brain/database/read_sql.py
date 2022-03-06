@@ -21,10 +21,12 @@ class Database:
             print("Connection Failed :(")
 
     def query(self,
-              query: str) -> None:
+              query: str, 
+              params: tuple = None
+              ) -> None:
         cursor = self.conn.cursor()
         try:
-            cursor.execute(query)
+            cursor.execute(query, params)
             result = cursor.fetchall()
         except Exception as e:
             print("Invalid Query")
