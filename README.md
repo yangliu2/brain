@@ -4,6 +4,12 @@
 This is a set of tools try to mimic how the brain would work to process 
 knowledge.
 
+## List of tools:
+* concept_net - Find relationship between two concepts
+* data - Accessing MySQL database
+* scrape - Early tool for scraping the websites
+* wiki - Use wikipedia database for concepts
+
 # Sources:
 ## Learning about ML
 Website: https://virgili0.github.io/  
