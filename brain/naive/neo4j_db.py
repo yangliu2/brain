@@ -33,70 +33,142 @@ class Neo4j:
         """
         self.driver.close()
 
-    def create_friendship(self,
-                          person1_name: str,
-                          person2_name: str):
+    def create_relationship(self,
+                            relationship: str,
+                            node1_type: str,
+                            node2_type: str,
+                            node1_name: str,
+                            node2_name: str):
+        """Create a relationship with two nodes. The relationship is 
+        unidirectional
+
+        :param relationship: indicate the relaitonship between two nodes. This
+        string is normally all caps to indicate it's a relationship
+        :type relationship: str
+        :param node1_type: indicate the type of node 1
+        :type node1_type: str
+        :param node1_type: indicate the type of node 2
+        :type node1_type: str
+        :param node1_name: name of node one
+        :type node1_name: str
+        :param node2_name: name of node two
+        :type node2_name: str
+        """
         with self.driver.session(database=Neo4jEnums.NEO4J.value) as session:
             # Write transactions allow the driver to handle retries and
             #  transient errors
             result = session.execute_write(
-                self._create_and_return_friendship,
-                person1_name,
-                person2_name)
+                self._create_and_return_relationship,
+                relationship,
+                node1_type,
+                node2_type,
+                node1_name,
+                node2_name)
             for row in result:
-                print(f"Created friendship between: {row['p1']}, {row['p2']}")
+                print(f"Created friendship between: {row['n1']}, {row['n2']}")
 
     @staticmethod
-    def _create_and_return_friendship(tx,
-                                      person1_name: str,
-                                      person2_name: str):
+    def _create_and_return_relationship(tx,
+                                        relationship: str,
+                                        node1_type: str,
+                                        node2_type: str,
+                                        node1_name: str,
+                                        node2_name: str):
+        """Actually create the relationship in a transaction function 
+
+        :param tx: the transaction function
+        :type tx: unknown, probably a Callable
+        :param relationship: how node1 is related to node 2, all caps to 
+        indicate relationship
+        :type relationship: str
+        :param node1_type: type for node 1, cap first letter
+        :type node1_type: str
+        :param node2_type: type of node 2, cap the first letter
+        :type node2_type: str
+        :param node1_name: name for node 1
+        :type node1_name: str
+        :param node2_name: name for node 2
+        :type node2_name: str
+        :return: List of dict 
+        :rtype: List of Dict
+        """
         # To learn more about the Cypher syntax,
         #  see https://neo4j.com/docs/cypher-manual/current/
         # The Reference Card is also a good resource for keywords
         #  https://neo4j.com/docs/cypher-refcard/current/
+        
+        #TODO: need to check of nodes exists. Otherwise it will create 
+        # ducplicate nodes. 
         query = (
-            "CREATE (p1:Person { name: $person1_name }) "
-            "CREATE (p2:Person { name: $person2_name }) "
-            "CREATE (p1)-[:KNOWS]->(p2) "
-            "RETURN p1, p2"
+            f"CREATE (n1:{node1_type} {{ name: $node1_name }}) "
+            f"CREATE (n2:{node2_type} {{ name: $node2_name }}) "
+            f"CREATE (n1)-[:{relationship}]->(n2) "
+            f"RETURN n1, n2"
         )
         result = tx.run(query,
-                        person1_name=person1_name,
-                        person2_name=person2_name)
+                        node1_name=node1_name,
+                        node2_name=node2_name)
         try:
-            return [{"p1": row["p1"]["name"], "p2": row["p2"]["name"]}
+            return [{"n1": row["n1"]["name"], "n2": row["n2"]["name"]}
                     for row in result]
         # Capture any errors along with the query and data for traceability
         except ServiceUnavailable as exception:
             logging.error(f"{query} raised an error: \n {exception}")
             raise
 
-    def find_person(self,
-                    person_name: str):
+    def find_node(self,
+                  node_type: str,
+                  node_name: str):
+        """Find the node in neo4j database and indicate whether it's found
+
+        :param node_type: type of node
+        :type node_type: str
+        :param node_name: name of node
+        :type node_name: str
+        """
         with self.driver.session(database=Neo4jEnums.NEO4J.value) as session:
             result = session.execute_read(
-                self._find_and_return_person,
-                person_name)
+                self._find_and_return_node,
+                node_type,
+                node_name)
             for row in result:
-                print("Found person: {row}".format(row=row))
+                print(f"Found node: {row}")
 
     @staticmethod
-    def _find_and_return_person(tx,
-                                person_name: str):
+    def _find_and_return_node(tx,
+                              node_type: str,
+                              node_name: str):
+        """The transcation function used to find the node
+
+        :param tx: transaction function
+        :type tx: unknown, Callable
+        :param node_type: type of node
+        :type node_type: str
+        :param node_name: name of node
+        :type node_name: str
+        :return: List of str
+        :rtype: List of str
+        """
         query = (
-            "MATCH (p:Person) "
-            "WHERE p.name = $person_name "
-            "RETURN p.name AS name"
+            f"MATCH (p:{node_type}) "
+            f"WHERE p.name = $node_name "
+            f"RETURN p.name AS name"
         )
-        result = tx.run(query, person_name=person_name)
+        result = tx.run(query,
+                        node_name=node_name)
         return [row["name"] for row in result]
 
 
 def main():
     # Aura queries use an encrypted connection using the "neo4j+s" URI scheme
     app = Neo4j()
-    app.create_friendship("Alice", "David")
-    app.find_person("Alice")
+    app.create_relationship(relationship="KNOWS", 
+                            node1_type="Person", 
+                            node2_type="Person",
+                            node1_name="Alice", 
+                            node2_name="David")
+    app.find_node(node_type="Person", 
+                  node_name="Alice")
     app.close()
 
 
