@@ -1,6 +1,7 @@
 from neo4j import GraphDatabase
 import logging
 from pathlib import Path
+from typing import List, Dict
 from brain.naive import utils
 from neo4j.exceptions import ServiceUnavailable
 from enum import Enum
@@ -33,6 +34,56 @@ class Neo4j:
         """
         self.driver.close()
 
+    def create_node(self,
+                    node_type: str,
+                    node_name: str) -> None:
+        """Create a node in the database
+
+        :param node_type: type of node
+        :type node_type: str
+        :param node_name: name of the node
+        :type node_name: str
+        """
+        with self.driver.session(database=Neo4jEnums.NEO4J.value) as session:
+            # Write transactions allow the driver to handle retries and
+            #  transient errors
+            result = session.execute_write(
+                self._create_node,
+                node_type,
+                node_name)
+            for row in result:
+                print(f"Created node {row['n']}")
+
+    @staticmethod
+    def _create_node(tx,
+                     node_type: str,
+                     node_name: str) -> List[Dict]:
+        """Transaction function to create the node
+
+        :param tx: transcation function
+        :type tx: unknow, Callable
+        :param node_type: node type
+        :type node_type: str
+        :param node_name: node name
+        :type node_name: str
+        :return: List of Dict
+        :rtype: List[Dict]
+        """
+
+        query = (
+            f"CREATE (n:{node_type} {{ name: $node_name }}) "
+            f"RETURN n"
+        )
+        result = tx.run(query,
+                        node_name=node_name)
+        try:
+            return [{"n": row["n"]["name"]}
+                    for row in result]
+        # Capture any errors along with the query and data for traceability
+        except ServiceUnavailable as exception:
+            logging.error(f"{query} raised an error: \n {exception}")
+            raise
+
     def create_relationship(self,
                             relationship: str,
                             node1_type: str,
@@ -54,6 +105,16 @@ class Neo4j:
         :param node2_name: name of node two
         :type node2_name: str
         """
+        # Create nodes if they don't exist
+        if not self.find_node(node_type=node1_type,
+                              node_name=node1_name):
+            self.create_node(node_type=node1_type,
+                             node_name=node1_name)
+        if not self.find_node(node_type=node2_type,
+                              node_name=node2_name):
+            self.create_node(node_type=node2_type,
+                             node_name=node2_name)
+
         with self.driver.session(database=Neo4jEnums.NEO4J.value) as session:
             # Write transactions allow the driver to handle retries and
             #  transient errors
@@ -73,7 +134,7 @@ class Neo4j:
                                         node1_type: str,
                                         node2_type: str,
                                         node1_name: str,
-                                        node2_name: str):
+                                        node2_name: str) -> List[Dict]:
         """Actually create the relationship in a transaction function 
 
         :param tx: the transaction function
@@ -96,13 +157,11 @@ class Neo4j:
         #  see https://neo4j.com/docs/cypher-manual/current/
         # The Reference Card is also a good resource for keywords
         #  https://neo4j.com/docs/cypher-refcard/current/
-        
-        #TODO: need to check of nodes exists. Otherwise it will create 
-        # ducplicate nodes. 
+
         query = (
-            f"CREATE (n1:{node1_type} {{ name: $node1_name }}) "
-            f"CREATE (n2:{node2_type} {{ name: $node2_name }}) "
-            f"CREATE (n1)-[:{relationship}]->(n2) "
+            f"MATCH (n1: {node1_type}), (n2: {node2_type}) "
+            f"WHERE n1.name = '$node1.name' AND n2.name = '$node2.name' "
+            f"CREATE (n1)-[r: {relationship}]->(n2) "
             f"RETURN n1, n2"
         )
         result = tx.run(query,
@@ -118,13 +177,15 @@ class Neo4j:
 
     def find_node(self,
                   node_type: str,
-                  node_name: str):
-        """Find the node in neo4j database and indicate whether it's found
+                  node_name: str) -> bool:
+        """Find the node in neo4j database and indicate whether it's found.
 
         :param node_type: type of node
         :type node_type: str
         :param node_name: name of node
         :type node_name: str
+        :return: whether there is a node with the given type and name
+        :rtype: bool
         """
         with self.driver.session(database=Neo4jEnums.NEO4J.value) as session:
             result = session.execute_read(
@@ -134,10 +195,15 @@ class Neo4j:
             for row in result:
                 print(f"Found node: {row}")
 
+            if result:
+                return True
+            else:
+                return False
+
     @staticmethod
     def _find_and_return_node(tx,
                               node_type: str,
-                              node_name: str):
+                              node_name: str) -> List[str]:
         """The transcation function used to find the node
 
         :param tx: transaction function
@@ -162,13 +228,14 @@ class Neo4j:
 def main():
     # Aura queries use an encrypted connection using the "neo4j+s" URI scheme
     app = Neo4j()
-    app.create_relationship(relationship="KNOWS", 
-                            node1_type="Person", 
+    app.create_relationship(relationship="KNOWS",
+                            node1_type="Person",
                             node2_type="Person",
-                            node1_name="Alice", 
-                            node2_name="David")
-    app.find_node(node_type="Person", 
-                  node_name="Alice")
+                            node1_name="Yang",
+                            node2_name="Fangfang")
+
+    app.find_node(node_type="Person",
+                  node_name="Fangfang")
     app.close()
 
 
