@@ -5,6 +5,7 @@ from typing import List, Dict
 from brain.naive import utils
 from neo4j.exceptions import ServiceUnavailable
 from enum import Enum
+from datetime import datetime
 
 
 class Neo4jEnums(Enum):
@@ -105,8 +106,6 @@ class Neo4j:
         :param node2_name: name of node two
         :type node2_name: str
         """
-        # TODO: make sure existing relationship exist so it doesn't create
-        #  a duplicate relationship
         # Create nodes if they don't exist
         if not self.find_node(node_type=node1_type,
                               node_name=node1_name):
@@ -117,19 +116,29 @@ class Neo4j:
             self.create_node(node_type=node2_type,
                              node_name=node2_name)
 
-        with self.driver.session(database=Neo4jEnums.NEO4J.value) as session:
-            # Write transactions allow the driver to handle retries and
-            #  transient errors
-            result = session.execute_write(
-                self._create_and_return_relationship,
-                relationship,
-                node1_type,
-                node2_type,
-                node1_name,
-                node2_name)
-            for row in result:
-                print(f"Created {relationship} between: "
-                      f"{row['n1']}, {row['n2']}")
+        # create relationship if it doesn't already exist
+        if not self.find_relationship(relationship=relationship,
+                                      node1_type=node1_type,
+                                      node2_type=node2_type,
+                                      node1_name=node1_name,
+                                      node2_name=node2_name):
+            with self.driver.session(
+                database=Neo4jEnums.NEO4J.value) as session:
+                # Write transactions allow the driver to handle retries and
+                #  transient errors
+                result = session.execute_write(
+                    self._create_and_return_relationship,
+                    relationship,
+                    node1_type,
+                    node2_type,
+                    node1_name,
+                    node2_name)
+                for row in result:
+                    print(f"Created {relationship} between: "
+                          f"{row['n1']}, {row['n2']}")
+        else:
+            print(f"Relationship {relationship} already existed between "
+                  f"{node1_name} and {node2_name}")
 
     @staticmethod
     def _create_and_return_relationship(tx,
@@ -181,9 +190,9 @@ class Neo4j:
                           node1_type: str,
                           node2_type: str,
                           node1_name: str,
-                          node2_name: str):
-        """Find a relationship with two nodes. The relationship is 
-        unidirectional.
+                          node2_name: str) -> bool:
+        """Find a relationship with two nodes and return whether the 
+        relationship was found. The relationship is unidirectional.
 
         :param relationship: indicate the relaitonship between two nodes. This
         string is normally all caps to indicate it's a relationship
@@ -196,19 +205,9 @@ class Neo4j:
         :type node1_name: str
         :param node2_name: name of node two
         :type node2_name: str
+        :return: whether there is a relationshp between the nodes
+        :rtype: bool
         """
-        # TODO: make sure existing relationship exist so it doesn't create
-        #  a duplicate relationship
-        # Create nodes if they don't exist
-        if not self.find_node(node_type=node1_type,
-                              node_name=node1_name):
-            self.create_node(node_type=node1_type,
-                             node_name=node1_name)
-        if not self.find_node(node_type=node2_type,
-                              node_name=node2_name):
-            self.create_node(node_type=node2_type,
-                             node_name=node2_name)
-
         with self.driver.session(database=Neo4jEnums.NEO4J.value) as session:
             # Write transactions allow the driver to handle retries and
             #  transient errors
@@ -222,6 +221,13 @@ class Neo4j:
             for row in result:
                 print(f"Found relationship({relationship}) between: "
                       f"{row['n1']}, {row['n2']}")
+                
+            # return whether the relationship is found
+            if result:
+                return True
+            else:
+                return False
+            
 
     @staticmethod
     def _find_relationship(tx,
@@ -289,6 +295,7 @@ class Neo4j:
             for row in result:
                 print(f"Found node: {row}")
 
+            # return whether the relationship was found
             if result:
                 return True
             else:
@@ -322,19 +329,15 @@ class Neo4j:
 def main():
     # Aura queries use an encrypted connection using the "neo4j+s" URI scheme
     app = Neo4j()
-    # app.create_relationship(relationship="KNOWS",
-    #                         node1_type="Person",
-    #                         node2_type="Person",
-    #                         node1_name="Fangfang",
-    #                         node2_name="Yang")
+    app.create_relationship(relationship="KNOWS",
+                            node1_type="Person",
+                            node2_type="Person",
+                            node1_name="Fangfang",
+                            node2_name="Yang")
 
-    # app.find_node(node_type="Person",
-    #               node_name="Fangfang")
-    app.find_relationship(relationship="KNOWS",
-                          node1_type="Person",
-                          node2_type="Person",
-                          node1_name="Fangfang",
-                          node2_name="Yang")
+    app.find_node(node_type="Person",
+                  node_name="Fangfang")
+
     app.close()
 
 
