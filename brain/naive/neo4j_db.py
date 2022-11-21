@@ -51,6 +51,8 @@ class Neo4j:
                 self._create_node,
                 node_type,
                 node_name)
+            for row in result:
+                logging.info(f"Created node {row['n']}")
 
     @staticmethod
     def _create_node(tx,
@@ -130,9 +132,12 @@ class Neo4j:
                     node2_type,
                     node1_name,
                     node2_name)
+                for row in result:
+                    logging.info(f"Created {relationship} between: "
+                                 f"{row['n1']}, {row['n2']}")
         else:
-            print(f"Relationship {relationship} already existed between "
-                  f"{node1_name} and {node2_name}")
+            logging(f"Relationship {relationship} already existed between "
+                    f"{node1_name} and {node2_name}")
 
     @staticmethod
     def _create_and_return_relationship(tx,
@@ -174,6 +179,7 @@ class Neo4j:
             f"{{ confidence: {confidence} }}]->(n2) "
             f"RETURN n1, n2"
         )
+
         result = tx.run(query)
         try:
             return [{"n1": row["n1"]["name"], "n2": row["n2"]["name"]}
@@ -216,6 +222,9 @@ class Neo4j:
                 node2_type,
                 node1_name,
                 node2_name)
+            for row in result:
+                logging.info(f"Found relationship({relationship}) between: "
+                             f"{row['n1']}, {row['n2']}")
 
             # return relationships if found any
             return [row for row in result]
@@ -283,7 +292,8 @@ class Neo4j:
                 self._find_and_return_node,
                 node_type,
                 node_name)
-
+            for row in result:
+                logging.info(f"Found node: {row}")
             # return node if found any
             return [row for row in result]
 
@@ -332,7 +342,6 @@ def main():
                                          node2_type="Person",
                                          node1_name="Yang",
                                          node2_name="Fangfang")
-
     utils.display_relationship(relations=relationship)
 
     app.close()
