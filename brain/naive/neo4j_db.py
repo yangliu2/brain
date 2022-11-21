@@ -136,7 +136,7 @@ class Neo4j:
                     logging.info(f"Created {relationship} between: "
                                  f"{row['n1']}, {row['n2']}")
         else:
-            logging(f"Relationship {relationship} already existed between "
+            logging.info(f"Relationship {relationship} already existed between "
                     f"{node1_name} and {node2_name}")
 
     @staticmethod
