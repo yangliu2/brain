@@ -5,7 +5,6 @@ from typing import List, Dict
 from brain.naive import utils
 from neo4j.exceptions import ServiceUnavailable
 from enum import Enum
-from datetime import datetime
 
 
 class Neo4jEnums(Enum):
@@ -52,8 +51,6 @@ class Neo4j:
                 self._create_node,
                 node_type,
                 node_name)
-            for row in result:
-                print(f"Created node {row['n']}")
 
     @staticmethod
     def _create_node(tx,
@@ -123,7 +120,7 @@ class Neo4j:
                                       node1_name=node1_name,
                                       node2_name=node2_name):
             with self.driver.session(
-                database=Neo4jEnums.NEO4J.value) as session:
+                    database=Neo4jEnums.NEO4J.value) as session:
                 # Write transactions allow the driver to handle retries and
                 #  transient errors
                 result = session.execute_write(
@@ -133,9 +130,6 @@ class Neo4j:
                     node2_type,
                     node1_name,
                     node2_name)
-                for row in result:
-                    print(f"Created {relationship} between: "
-                          f"{row['n1']}, {row['n2']}")
         else:
             print(f"Relationship {relationship} already existed between "
                   f"{node1_name} and {node2_name}")
@@ -146,7 +140,8 @@ class Neo4j:
                                         node1_type: str,
                                         node2_type: str,
                                         node1_name: str,
-                                        node2_name: str) -> List[Dict]:
+                                        node2_name: str,
+                                        confidence: float = 0.5) -> List[Dict]:
         """Actually create the relationship in a transaction function 
 
         :param tx: the transaction function
@@ -162,6 +157,8 @@ class Neo4j:
         :type node1_name: str
         :param node2_name: name for node 2
         :type node2_name: str
+        :param confidence: confidence of the relationship, default to 0.5
+        :type confidence: float
         :return: List of dict 
         :rtype: List of Dict
         """
@@ -173,7 +170,8 @@ class Neo4j:
         query = (
             f"MATCH (n1: {node1_type}), (n2: {node2_type}) "
             f"WHERE n1.name = '{node1_name}' AND n2.name = '{node2_name}' "
-            f"CREATE (n1)-[r: {relationship}]->(n2) "
+            f"CREATE (n1)-[r: {relationship} "
+            f"{{ confidence: {confidence} }}]->(n2) "
             f"RETURN n1, n2"
         )
         result = tx.run(query)
@@ -190,7 +188,7 @@ class Neo4j:
                           node1_type: str,
                           node2_type: str,
                           node1_name: str,
-                          node2_name: str) -> bool:
+                          node2_name: str) -> List[Dict[str, str]]:
         """Find a relationship with two nodes and return whether the 
         relationship was found. The relationship is unidirectional.
 
@@ -205,8 +203,8 @@ class Neo4j:
         :type node1_name: str
         :param node2_name: name of node two
         :type node2_name: str
-        :return: whether there is a relationshp between the nodes
-        :rtype: bool
+        :return: List of Dict
+        :rtype: List[Dict[str,str]]
         """
         with self.driver.session(database=Neo4jEnums.NEO4J.value) as session:
             # Write transactions allow the driver to handle retries and
@@ -218,16 +216,9 @@ class Neo4j:
                 node2_type,
                 node1_name,
                 node2_name)
-            for row in result:
-                print(f"Found relationship({relationship}) between: "
-                      f"{row['n1']}, {row['n2']}")
-                
-            # return whether the relationship is found
-            if result:
-                return True
-            else:
-                return False
-            
+
+            # return relationships if found any
+            return [row for row in result]
 
     @staticmethod
     def _find_relationship(tx,
@@ -268,7 +259,7 @@ class Neo4j:
         try:
             return [{"n1": row["n1"]["name"],
                      "n2": row["n2"]["name"],
-                     "r": type(row["r"])}
+                     "r": relationship}
                     for row in result]
         # Capture any errors along with the query and data for traceability
         except ServiceUnavailable as exception:
@@ -277,7 +268,7 @@ class Neo4j:
 
     def find_node(self,
                   node_type: str,
-                  node_name: str) -> bool:
+                  node_name: str) -> List[str]:
         """Find the node in neo4j database and indicate whether it's found.
 
         :param node_type: type of node
@@ -285,21 +276,16 @@ class Neo4j:
         :param node_name: name of node
         :type node_name: str
         :return: whether there is a node with the given type and name
-        :rtype: bool
+        :rtype: List[str]
         """
         with self.driver.session(database=Neo4jEnums.NEO4J.value) as session:
             result = session.execute_read(
                 self._find_and_return_node,
                 node_type,
                 node_name)
-            for row in result:
-                print(f"Found node: {row}")
 
-            # return whether the relationship was found
-            if result:
-                return True
-            else:
-                return False
+            # return node if found any
+            return [row for row in result]
 
     @staticmethod
     def _find_and_return_node(tx,
@@ -323,7 +309,11 @@ class Neo4j:
         )
         result = tx.run(query,
                         node_name=node_name)
-        return [row["name"] for row in result]
+        try:
+            return [row["name"] for row in result]
+        except ServiceUnavailable as exception:
+            logging.error(f"{query} raised an error: \n {exception}")
+            raise
 
 
 def main():
@@ -332,11 +322,18 @@ def main():
     app.create_relationship(relationship="KNOWS",
                             node1_type="Person",
                             node2_type="Person",
-                            node1_name="Fangfang",
-                            node2_name="Yang")
+                            node1_name="Yang",
+                            node2_name="Fangfang")
 
-    app.find_node(node_type="Person",
-                  node_name="Fangfang")
+    nodes = app.find_node(node_type="Person",
+                          node_name="Fangfang")
+    relationship = app.find_relationship(relationship="KNOWS",
+                                         node1_type="Person",
+                                         node2_type="Person",
+                                         node1_name="Yang",
+                                         node2_name="Fangfang")
+
+    utils.display_relationship(relations=relationship)
 
     app.close()
 
