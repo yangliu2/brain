@@ -30,8 +30,8 @@ def display_table(rows: List[List[str]]):
 
     table = Table()
     table.add_column("Name", justify="left", style="cyan", no_wrap=True)
-    table.add_column("Target", justify="left", style="magenta")
     table.add_column("Relationship", justify="left", style="green")
+    table.add_column("Target", justify="left", style="magenta")
 
     # add each row to the table
     [table.add_row(*x) for x in rows]

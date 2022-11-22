@@ -276,15 +276,11 @@ class Neo4j:
             raise
 
     def find_all_relationships(self,
-                               relationship: str,
                                node_type: str,
                                node_name: str) -> List[Dict[str, str]]:
         """Find all relationships with originated from the starting node. The 
         relationship is unidirectional.
 
-        :param relationship: indicate the relaitonship between two nodes. This
-        string is normally all caps to indicate it's a relationship
-        :type relationship: str
         :param node_type: indicate the type of node 1
         :type node_type: str
         :param node_name: name of node one
@@ -297,11 +293,10 @@ class Neo4j:
             #  transient errors
             result = session.execute_write(
                 self._find_all_relationships,
-                relationship,
                 node_type,
                 node_name)
             for row in result:
-                logging.info(f"Found relationship({relationship}) between: "
+                logging.info(f"Found relationship({row['r']}) between: "
                              f"{row['n1']}, {row['n2']}")
 
             # return relationships if found any
@@ -309,16 +304,12 @@ class Neo4j:
 
     @staticmethod
     def _find_all_relationships(tx,
-                                relationship: str,
                                 node1_type: str,
                                 node1_name: str) -> List[Dict]:
         """Actually find the relationship in a transaction function 
 
         :param tx: the transaction function
         :type tx: unknown, probably a Callable
-        :param relationship: how node1 is related to node 2, all caps to 
-        indicate relationship
-        :type relationship: str
         :param node_type: type for node, cap first letter
         :type node_type: str
         :param node_name: name for node
@@ -329,25 +320,25 @@ class Neo4j:
         # get all relationships originated to the node
         query = (
             f"MATCH(n1: {node1_type} {{name: '{node1_name}'}})-[r]->(n2) "
-            f"RETURN n1, n2, r"
+            f"RETURN n1, r, n2"
         )
         result1 = tx.run(query)
 
         # get all relationships directed towards the node
         query = (
             f"MATCH(n1)-[r]->(n2:{node1_type} {{name: '{node1_name}'}}) "
-            f"RETURN n1, n2, r"
+            f"RETURN n1, r, n2"
         )
         result2 = tx.run(query)
 
         try:
             result1_list = [{"n1": row["n1"]["name"],
-                            "n2": row["n2"]["name"],
-                             "r": str(row['r'].type)}
+                             "r": str(row['r'].type),
+                             "n2": row["n2"]["name"]}
                             for row in result1]
             result2_list = [{"n1": row["n1"]["name"],
-                            "n2": row["n2"]["name"],
-                             "r": str(row['r'].type)}
+                             "r": str(row['r'].type),
+                             "n2": row["n2"]["name"]}
                             for row in result2]
             all_results = result1_list + result2_list
             return all_results

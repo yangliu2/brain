@@ -16,9 +16,8 @@ def test():
 
         node_name, node_type, = response.split(" ")
 
-        relationships = app.find_all_relationships(relationship="KNOWS",
-                                                  node_type="Person",
-                                                  node_name="Yang")
+        relationships = app.find_all_relationships(node_type=node_type,
+                                                   node_name=node_name)
         utils.display_relationship(relations=relationships)
 
 
