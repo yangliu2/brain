@@ -137,7 +137,7 @@ class Neo4j:
                                  f"{row['n1']}, {row['n2']}")
         else:
             logging.info(f"Relationship {relationship} already existed between "
-                    f"{node1_name} and {node2_name}")
+                         f"{node1_name} and {node2_name}")
 
     @staticmethod
     def _create_and_return_relationship(tx,
@@ -195,8 +195,8 @@ class Neo4j:
                           node2_type: str,
                           node1_name: str,
                           node2_name: str) -> List[Dict[str, str]]:
-        """Find a relationship with two nodes and return whether the 
-        relationship was found. The relationship is unidirectional.
+        """Find a relationship with two nodes. The relationship is 
+        unidirectional.
 
         :param relationship: indicate the relaitonship between two nodes. This
         string is normally all caps to indicate it's a relationship
@@ -270,6 +270,87 @@ class Neo4j:
                      "n2": row["n2"]["name"],
                      "r": relationship}
                     for row in result]
+        # Capture any errors along with the query and data for traceability
+        except ServiceUnavailable as exception:
+            logging.error(f"{query} raised an error: \n {exception}")
+            raise
+
+    def find_all_relationships(self,
+                               relationship: str,
+                               node_type: str,
+                               node_name: str) -> List[Dict[str, str]]:
+        """Find all relationships with originated from the starting node. The 
+        relationship is unidirectional.
+
+        :param relationship: indicate the relaitonship between two nodes. This
+        string is normally all caps to indicate it's a relationship
+        :type relationship: str
+        :param node_type: indicate the type of node 1
+        :type node_type: str
+        :param node_name: name of node one
+        :type node_name: str
+        :return: List of Dict
+        :rtype: List[Dict[str,str]]
+        """
+        with self.driver.session(database=Neo4jEnums.NEO4J.value) as session:
+            # Write transactions allow the driver to handle retries and
+            #  transient errors
+            result = session.execute_write(
+                self._find_all_relationships,
+                relationship,
+                node_type,
+                node_name)
+            for row in result:
+                logging.info(f"Found relationship({relationship}) between: "
+                             f"{row['n1']}, {row['n2']}")
+
+            # return relationships if found any
+            return [row for row in result]
+
+    @staticmethod
+    def _find_all_relationships(tx,
+                                relationship: str,
+                                node1_type: str,
+                                node1_name: str) -> List[Dict]:
+        """Actually find the relationship in a transaction function 
+
+        :param tx: the transaction function
+        :type tx: unknown, probably a Callable
+        :param relationship: how node1 is related to node 2, all caps to 
+        indicate relationship
+        :type relationship: str
+        :param node_type: type for node, cap first letter
+        :type node_type: str
+        :param node_name: name for node
+        :type node_name: str
+        :return: List of dict 
+        :rtype: List of Dict
+        """
+        # get all relationships originated to the node
+        query = (
+            f"MATCH(n1: {node1_type} {{name: '{node1_name}'}})-[r]->(n2) "
+            f"RETURN n1, n2, r"
+        )
+        result1 = tx.run(query)
+
+        # get all relationships directed towards the node
+        query = (
+            f"MATCH(n1)-[r]->(n2:{node1_type} {{name: '{node1_name}'}}) "
+            f"RETURN n1, n2, r"
+        )
+        result2 = tx.run(query)
+
+        try:
+            result1_list = [{"n1": row["n1"]["name"],
+                            "n2": row["n2"]["name"],
+                             "r": str(row['r'].type)}
+                            for row in result1]
+            result2_list = [{"n1": row["n1"]["name"],
+                            "n2": row["n2"]["name"],
+                             "r": str(row['r'].type)}
+                            for row in result2]
+            all_results = result1_list + result2_list
+            return all_results
         # Capture any errors along with the query and data for traceability
         except ServiceUnavailable as exception:
             logging.error(f"{query} raised an error: \n {exception}")

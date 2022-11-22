@@ -46,9 +46,8 @@ def display_relationship(relations: List[Dict]):
     :param relations: relationship as a list of dict
     :type relations: List[Dict]
     """
-    # Made a 2d list so it fits into the table structure
-    node_2d_list = [[str(x)
-                    for row in relations
-                    for x in row.values()]]
+    # Make a 2d list so it fits into the table structure        
+    node_2d_list = [[str(x) for x in row.values()] 
+                    for row in relations]
 
     display_table(rows=node_2d_list)
