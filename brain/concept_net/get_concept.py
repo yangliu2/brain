@@ -36,3 +36,11 @@ def find_relations(concept_1: str,
     relations = [edge['surfaceText']
                  for edge in obj['edges'] if 'surfaceText' in edge]
     return relations
+
+
+def main():
+      concept = get_concepts(concept_name="leaf")
+      pprint(concept)
+
+if __name__ == "__main__":
+    main()

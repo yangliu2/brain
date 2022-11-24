@@ -91,7 +91,8 @@ class Neo4j:
                             node1_name: str,
                             node2_name: str):
         """Create a relationship with two nodes. The relationship is 
-        unidirectional
+        unidirectional. If the relationship alread exist, then choose to 
+        strenthen the relationship. 
 
         :param relationship: indicate the relaitonship between two nodes. This
         string is normally all caps to indicate it's a relationship
@@ -116,11 +117,12 @@ class Neo4j:
                              node_name=node2_name)
 
         # create relationship if it doesn't already exist
-        if not self.find_relationship(relationship=relationship,
-                                      node1_type=node1_type,
-                                      node2_type=node2_type,
-                                      node1_name=node1_name,
-                                      node2_name=node2_name):
+        found_relationship = self.find_relationship(relationship=relationship,
+                                                    node1_type=node1_type,
+                                                    node2_type=node2_type,
+                                                    node1_name=node1_name,
+                                                    node2_name=node2_name)
+        if not found_relationship:
             with self.driver.session(
                     database=Neo4jEnums.NEO4J.value) as session:
                 # Write transactions allow the driver to handle retries and
@@ -136,8 +138,24 @@ class Neo4j:
                     logging.info(f"Created {relationship} between: "
                                  f"{row['n1']}, {row['n2']}")
         else:
-            logging.info(f"Relationship {relationship} already existed between "
-                         f"{node1_name} and {node2_name}")
+            # get confidence and modify it if relationship exists
+            confidence = float(found_relationship[0]['confidence'])
+            new_confidence = self.calculate_confidence(confidence=confidence)
+            with self.driver.session(
+                    database=Neo4jEnums.NEO4J.value) as session:
+                # Write transactions allow the driver to handle retries and
+                #  transient errors
+                result = session.execute_write(
+                    self._modify_relationship,
+                    relationship,
+                    node1_type,
+                    node2_type,
+                    node1_name,
+                    node2_name,
+                    new_confidence)
+                for row in result:
+                    logging.info(f"Relationship {relationship} was strenthened "
+                                 f"between {node1_name} and {node2_name}")
 
     @staticmethod
     def _create_and_return_relationship(tx,
@@ -177,6 +195,68 @@ class Neo4j:
             f"WHERE n1.name = '{node1_name}' AND n2.name = '{node2_name}' "
             f"CREATE (n1)-[r: {relationship} "
             f"{{ confidence: {confidence} }}]->(n2) "
+            f"RETURN n1, n2"
+        )
+
+        result = tx.run(query)
+        try:
+            return [{"n1": row["n1"]["name"], "n2": row["n2"]["name"]}
+                    for row in result]
+        # Capture any errors along with the query and data for traceability
+        except ServiceUnavailable as exception:
+            logging.error(f"{query} raised an error: \n {exception}")
+            raise
+
+    @staticmethod
+    def calculate_confidence(confidence: float,
+                             increase_factor: float = 0.10) -> float:
+        """Calculate the new relationship confidence if the relationship 
+        already exists
+
+        :param confidence: old confidence
+        :type confidence: float
+        :param increase_factor: how much does the confidence increase as a 
+        factor, defaults to 0.10
+        :type increase_factor: float, optional
+        :return: new confidence used to update
+        :rtype: float
+        """
+        new_confidence = confidence + (1 - confidence) * increase_factor
+        return round(new_confidence, 3)
+
+    def _modify_relationship(self,
+                             tx,
+                             relationship: str,
+                             node1_type: str,
+                             node2_type: str,
+                             node1_name: str,
+                             node2_name: str,
+                             confidence: float) -> List[Dict]:
+        """Actually modify the relationship in a transaction function 
+
+        :param tx: the transaction function
+        :type tx: unknown, probably a Callable
+        :param relationship: how node1 is related to node 2, all caps to 
+        indicate relationship
+        :type relationship: str
+        :param node1_type: type for node 1, cap first letter
+        :type node1_type: str
+        :param node2_type: type of node 2, cap the first letter
+        :type node2_type: str
+        :param node1_name: name for node 1
+        :type node1_name: str
+        :param node2_name: name for node 2
+        :type node2_name: str
+        :param confidence: confidence of the relationship
+        :type confidence: float
+        :return: List of dict 
+        :rtype: List of Dict
+        """
+        query = (
+            f"MATCH (n1: {node1_type} {{ name: '{node1_name}' }}) "
+            f"-[r:{relationship}]->"
+            f"(n2: {node2_type} {{ name: '{node2_name}'}}) "
+            f"SET r.confidence = {confidence} "
             f"RETURN n1, n2"
         )
 
@@ -268,7 +348,8 @@ class Neo4j:
         try:
             return [{"n1": row["n1"]["name"],
                      "n2": row["n2"]["name"],
-                     "r": relationship}
+                     "r": relationship,
+                     "confidence": row["r"]["confidence"]}
                     for row in result]
         # Capture any errors along with the query and data for traceability
         except ServiceUnavailable as exception:
@@ -334,10 +415,12 @@ class Neo4j:
         try:
             result1_list = [{"n1": row["n1"]["name"],
                              "r": str(row['r'].type),
+                             "c": row['r']['confidence'],
                              "n2": row["n2"]["name"]}
                             for row in result1]
             result2_list = [{"n1": row["n1"]["name"],
                              "r": str(row['r'].type),
+                             "c": row['r']['confidence'],
                              "n2": row["n2"]["name"]}
                             for row in result2]
             all_results = result1_list + result2_list
