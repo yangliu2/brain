@@ -84,19 +84,19 @@ class Neo4j:
             logging.error(f"{query} raised an error: \n {exception}")
             raise
 
-    def create_relationship(self,
-                            relationship: str,
-                            node1_type: str,
-                            node2_type: str,
-                            node1_name: str,
-                            node2_name: str):
+    def create_edge(self,
+                    edge: str,
+                    node1_type: str,
+                    node2_type: str,
+                    node1_name: str,
+                    node2_name: str):
         """Create a relationship with two nodes. The relationship is 
         unidirectional. If the relationship alread exist, then choose to 
         strenthen the relationship. 
 
-        :param relationship: indicate the relaitonship between two nodes. This
+        :param edge: indicate the relaitonship between two nodes. This
         string is normally all caps to indicate it's a relationship
-        :type relationship: str
+        :type edge: str
         :param node1_type: indicate the type of node 1
         :type node1_type: str
         :param node1_type: indicate the type of node 2
@@ -117,61 +117,61 @@ class Neo4j:
                              node_name=node2_name)
 
         # create relationship if it doesn't already exist
-        found_relationship = self.find_relationship(relationship=relationship,
-                                                    node1_type=node1_type,
-                                                    node2_type=node2_type,
-                                                    node1_name=node1_name,
-                                                    node2_name=node2_name)
-        if not found_relationship:
+        found_edge = self.find_edge(edge=edge,
+                                    node1_type=node1_type,
+                                    node2_type=node2_type,
+                                    node1_name=node1_name,
+                                    node2_name=node2_name)
+        if not found_edge:
             with self.driver.session(
                     database=Neo4jEnums.NEO4J.value) as session:
                 # Write transactions allow the driver to handle retries and
                 #  transient errors
                 result = session.execute_write(
-                    self._create_and_return_relationship,
-                    relationship,
+                    self._create_and_return_edge,
+                    edge,
                     node1_type,
                     node2_type,
                     node1_name,
                     node2_name)
                 for row in result:
-                    logging.info(f"Created {relationship} between: "
+                    logging.info(f"Created {edge} between: "
                                  f"{row['n1']}, {row['n2']}")
         else:
             # get confidence and modify it if relationship exists
-            confidence = float(found_relationship[0]['confidence'])
+            confidence = float(found_edge[0]['confidence'])
             new_confidence = self.calculate_confidence(confidence=confidence)
             with self.driver.session(
                     database=Neo4jEnums.NEO4J.value) as session:
                 # Write transactions allow the driver to handle retries and
                 #  transient errors
                 result = session.execute_write(
-                    self._modify_relationship,
-                    relationship,
+                    self._modify_edge,
+                    edge,
                     node1_type,
                     node2_type,
                     node1_name,
                     node2_name,
                     new_confidence)
                 for row in result:
-                    logging.info(f"Relationship {relationship} was strenthened "
+                    logging.info(f"Relationship {edge} was strenthened "
                                  f"between {node1_name} and {node2_name}")
 
     @staticmethod
-    def _create_and_return_relationship(tx,
-                                        relationship: str,
-                                        node1_type: str,
-                                        node2_type: str,
-                                        node1_name: str,
-                                        node2_name: str,
-                                        confidence: float = 0.5) -> List[Dict]:
+    def _create_and_return_edge(tx,
+                                edge: str,
+                                node1_type: str,
+                                node2_type: str,
+                                node1_name: str,
+                                node2_name: str,
+                                confidence: float = 0.5) -> List[Dict]:
         """Actually create the relationship in a transaction function 
 
         :param tx: the transaction function
         :type tx: unknown, probably a Callable
-        :param relationship: how node1 is related to node 2, all caps to 
+        :param edge: how node1 is related to node 2, all caps to 
         indicate relationship
-        :type relationship: str
+        :type edge: str
         :param node1_type: type for node 1, cap first letter
         :type node1_type: str
         :param node2_type: type of node 2, cap the first letter
@@ -193,7 +193,7 @@ class Neo4j:
         query = (
             f"MATCH (n1: {node1_type}), (n2: {node2_type}) "
             f"WHERE n1.name = '{node1_name}' AND n2.name = '{node2_name}' "
-            f"CREATE (n1)-[r: {relationship} "
+            f"CREATE (n1)-[r: {edge} "
             f"{{ confidence: {confidence} }}]->(n2) "
             f"RETURN n1, n2"
         )
@@ -224,21 +224,21 @@ class Neo4j:
         new_confidence = confidence + (1 - confidence) * increase_factor
         return round(new_confidence, 3)
 
-    def _modify_relationship(self,
-                             tx,
-                             relationship: str,
-                             node1_type: str,
-                             node2_type: str,
-                             node1_name: str,
-                             node2_name: str,
-                             confidence: float) -> List[Dict]:
+    def _modify_edge(self,
+                     tx,
+                     edge: str,
+                     node1_type: str,
+                     node2_type: str,
+                     node1_name: str,
+                     node2_name: str,
+                     confidence: float) -> List[Dict]:
         """Actually modify the relationship in a transaction function 
 
         :param tx: the transaction function
         :type tx: unknown, probably a Callable
-        :param relationship: how node1 is related to node 2, all caps to 
+        :param edge: how node1 is related to node 2, all caps to 
         indicate relationship
-        :type relationship: str
+        :type edge: str
         :param node1_type: type for node 1, cap first letter
         :type node1_type: str
         :param node2_type: type of node 2, cap the first letter
@@ -254,7 +254,7 @@ class Neo4j:
         """
         query = (
             f"MATCH (n1: {node1_type} {{ name: '{node1_name}' }}) "
-            f"-[r:{relationship}]->"
+            f"-[r:{edge}]->"
             f"(n2: {node2_type} {{ name: '{node2_name}'}}) "
             f"SET r.confidence = {confidence} "
             f"RETURN n1, n2"
@@ -269,18 +269,18 @@ class Neo4j:
             logging.error(f"{query} raised an error: \n {exception}")
             raise
 
-    def find_relationship(self,
-                          relationship: str,
-                          node1_type: str,
-                          node2_type: str,
-                          node1_name: str,
-                          node2_name: str) -> List[Dict[str, str]]:
+    def find_edge(self,
+                  edge: str,
+                  node1_type: str,
+                  node2_type: str,
+                  node1_name: str,
+                  node2_name: str) -> List[Dict[str, str]]:
         """Find a relationship with two nodes. The relationship is 
         unidirectional.
 
-        :param relationship: indicate the relaitonship between two nodes. This
+        :param edge: indicate the relaitonship between two nodes. This
         string is normally all caps to indicate it's a relationship
-        :type relationship: str
+        :type edge: str
         :param node1_type: indicate the type of node 1
         :type node1_type: str
         :param node1_type: indicate the type of node 2
@@ -296,33 +296,33 @@ class Neo4j:
             # Write transactions allow the driver to handle retries and
             #  transient errors
             result = session.execute_write(
-                self._find_relationship,
-                relationship,
+                self._find_edge,
+                edge,
                 node1_type,
                 node2_type,
                 node1_name,
                 node2_name)
             for row in result:
-                logging.info(f"Found relationship({relationship}) between: "
+                logging.info(f"Found relationship({edge}) between: "
                              f"{row['n1']}, {row['n2']}")
 
             # return relationships if found any
             return [row for row in result]
 
     @staticmethod
-    def _find_relationship(tx,
-                           relationship: str,
-                           node1_type: str,
-                           node2_type: str,
-                           node1_name: str,
-                           node2_name: str) -> List[Dict]:
+    def _find_edge(tx,
+                   edge: str,
+                   node1_type: str,
+                   node2_type: str,
+                   node1_name: str,
+                   node2_name: str) -> List[Dict]:
         """Actually find the relationship in a transaction function 
 
         :param tx: the transaction function
         :type tx: unknown, probably a Callable
-        :param relationship: how node1 is related to node 2, all caps to 
+        :param edge: how node1 is related to node 2, all caps to 
         indicate relationship
-        :type relationship: str
+        :type edge: str
         :param node1_type: type for node 1, cap first letter
         :type node1_type: str
         :param node2_type: type of node 2, cap the first letter
@@ -340,7 +340,7 @@ class Neo4j:
         #  https://neo4j.com/docs/cypher-refcard/current/
 
         query = (
-            f"MATCH (n1: {node1_type})-[r:{relationship}]->(n2:{node2_type}) "
+            f"MATCH (n1: {node1_type})-[r:{edge}]->(n2:{node2_type}) "
             f"WHERE n1.name = '{node1_name}' AND n2.name = '{node2_name}' "
             f"RETURN n1, n2, r"
         )
@@ -348,7 +348,7 @@ class Neo4j:
         try:
             return [{"n1": row["n1"]["name"],
                      "n2": row["n2"]["name"],
-                     "r": relationship,
+                     "r": edge,
                      "confidence": row["r"]["confidence"]}
                     for row in result]
         # Capture any errors along with the query and data for traceability
@@ -356,9 +356,9 @@ class Neo4j:
             logging.error(f"{query} raised an error: \n {exception}")
             raise
 
-    def find_all_relationships(self,
-                               node_type: str,
-                               node_name: str) -> List[Dict[str, str]]:
+    def find_all_edge(self,
+                      node_type: str,
+                      node_name: str) -> List[Dict[str, str]]:
         """Find all relationships with originated from the starting node. The 
         relationship is unidirectional.
 
@@ -373,7 +373,7 @@ class Neo4j:
             # Write transactions allow the driver to handle retries and
             #  transient errors
             result = session.execute_write(
-                self._find_all_relationships,
+                self._find_all_edge,
                 node_type,
                 node_name)
             for row in result:
@@ -384,9 +384,9 @@ class Neo4j:
             return [row for row in result]
 
     @staticmethod
-    def _find_all_relationships(tx,
-                                node1_type: str,
-                                node1_name: str) -> List[Dict]:
+    def _find_all_edge(tx,
+                       node1_type: str,
+                       node1_name: str) -> List[Dict]:
         """Actually find the relationship in a transaction function 
 
         :param tx: the transaction function
@@ -484,20 +484,20 @@ class Neo4j:
 def main():
     # Aura queries use an encrypted connection using the "neo4j+s" URI scheme
     app = Neo4j()
-    app.create_relationship(relationship="KNOWS",
-                            node1_type="Person",
-                            node2_type="Person",
-                            node1_name="Yang",
-                            node2_name="Fangfang")
+    app.create_edge(edge="KNOWS",
+                    node1_type="Person",
+                    node2_type="Person",
+                    node1_name="Yang",
+                    node2_name="Fangfang")
 
     nodes = app.find_node(node_type="Person",
                           node_name="Fangfang")
-    relationship = app.find_relationship(relationship="KNOWS",
-                                         node1_type="Person",
-                                         node2_type="Person",
-                                         node1_name="Yang",
-                                         node2_name="Fangfang")
-    utils.display_relationship(relations=relationship)
+    edge = app.find_edge(edge="KNOWS",
+                         node1_type="Person",
+                         node2_type="Person",
+                         node1_name="Yang",
+                         node2_name="Fangfang")
+    utils.display_edge(edges=edge)
 
     app.close()
 
