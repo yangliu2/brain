@@ -16,9 +16,9 @@ def test():
 
         node_name, node_type, = response.split(" ")
 
-        relationships = app.find_all_relationships(node_type=node_type,
-                                                   node_name=node_name)
-        utils.display_relationship(relations=relationships)
+        edges = app.find_all_edge(node_type=node_type,
+                                  node_name=node_name)
+        utils.display_edge(edges=edges)
 
 
 def main():

@@ -25,7 +25,8 @@ node1 name, and node2 name. If will check whether a relationship between the
 nodes already exists using `Neo4j.find_relationship`. 
 
 # TODO
-
+Check and make sure the type of nodes belongs to a specific list. If it 
+doesn't, then find the closest choice to reduce duplicate types. 
 
 # Export data from cloud database
 Use the following command in the web query to get json lines generated. Then

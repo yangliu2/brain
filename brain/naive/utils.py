@@ -41,14 +41,14 @@ def display_table(rows: List[List[str]]):
     console.print(table)
 
 
-def display_relationship(relations: List[Dict]):
+def display_edge(edges: List[Dict]):
     """Use Rich package for display
 
-    :param relations: relationship as a list of dict
+    :param edges: relationship as a list of dict
     :type relations: List[Dict]
     """
-    # Make a 2d list so it fits into the table structure        
-    node_2d_list = [[str(x) for x in row.values()] 
-                    for row in relations]
+    # Make a 2d list so it fits into the table structure
+    node_2d_list = [[str(x) for x in row.values()]
+                    for row in edges]
 
     display_table(rows=node_2d_list)

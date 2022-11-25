@@ -68,9 +68,9 @@ class ConceptNet():
         :rtype: Dict
         """
         interested_list = [x.value for x in RelationTypesEnum]
-        relations = [{'n1': {edge['start']['@id'].split('/')[-1]},
-                     'r': {self.convert_relations(edge['rel']['label'])},
-                     'n2': {edge['end']['@id'].split('/')[-1]}}
+        relations = [{'n1': edge['start']['@id'].split('/')[-1],
+                     'r': self.convert_relations(edge['rel']['label']),
+                     'n2': edge['end']['@id'].split('/')[-1]}
                      for edge in conceptnet_output['edges']
                      if edge['rel']['label'] in interested_list]
         return relations
