@@ -26,3 +26,8 @@ nodes already exists using `Neo4j.find_relationship`.
 
 # TODO
 
+
+# Export data from cloud database
+Use the following command in the web query to get json lines generated. Then
+copy the json lines as the export.  
+```CALL apoc.export.json.all(null,{useTypes:true, stream: true})```
