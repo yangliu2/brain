@@ -5,7 +5,7 @@ import logging
 
 
 def add_concept_net_edges(nodes: List[str]):
-    """Add relationshps got from concept net
+    """Add relationships got from concept net into Neo4j database
 
     :param nodes: the nodes used for searching for edges in concept net
     :type nodes: List[str]
@@ -19,35 +19,45 @@ def add_concept_net_edges(nodes: List[str]):
         nodes = concept.format_for_neo4j(conceptnet_output=related)
         concept_net_edges.extend(nodes)
 
-    # ask which relationship to add
-    edges_display = "\n".join([f"({i}): {x['n1']} {x['r']} {x['n2']}"
-                               for i, x in enumerate(concept_net_edges)])
+    # put all the relationships together as a string to display
+    edges_dicts = [f"({i}): {x['n1']} {x['r']} {x['n2']}"
+                   for i, x in enumerate(concept_net_edges)]
+    edges_display = "\n".join(edges_dicts)
 
-    include = input(f"Would you like to include any of these concepts? "
-                    f"All (y), Select(s), Manual Input(m)\n"
-                    f"{edges_display}\n>:")
+    response = input(f"Would you like to include any of these concepts? "
+                     f"All (y), Select(s), Manual Input(m), (exit) to quit\n"
+                     f"{edges_display}\n>:")
 
+    
     # add relationships according to user choices
-    if include in ['all', 'All', 'yes', 'y', 'YES']:
+    if response in ['all', 'All', 'yes', 'y', 'YES']:
         # add all relationships
         add_edges(edges=concept_net_edges)
-    elif include in ['select', 'Select', 's', 'S']:
-        choices = input("Please enter the relationship you would like to add")
+    elif response in ['select', 'Select', 's', 'S']:
+        # add only selective choices
+        choices = input("Please enter the relationship you would like to "
+                        "add")
         int_choices = [int(x) for x in choices]
         chosen_edges = [concept_net_edges[x] for x in int_choices]
         add_edges(edges=chosen_edges)
-    elif include in ['Manual', 'manual', 'm', 'M']:
-        response = input("Please indicate relationship in the format "
-                         "<node1 name> <node1 type> <relationship> "
-                         "<node2> <node2 type>:\n")
-        node1_name, node1_type, edge, node2_name, node2_type = \
-            response.split(" ")
+    elif response in ['Manual', 'manual', 'm', 'M']:
+        # manually add relationships
+        while response != "exit":
+            response = input("Please indicate relationship in the format "
+                            "<node1 name> <node1 type> <relationship> "
+                            "<node2> <node2 type>:\n")
+            
+            if response == "exit":
+                break
+            
+            node1_name, node1_type, edge, node2_name, node2_type = \
+                response.split(" ")
 
-        app.create_edge(edge=edge,
-                        node1_type=node1_type,
-                        node2_type=node2_type,
-                        node1_name=node1_name,
-                        node2_name=node2_name)
+            app.create_edge(edge=edge,
+                            node1_type=node1_type,
+                            node2_type=node2_type,
+                            node1_name=node1_name,
+                            node2_name=node2_name)
 
 
 def add_edges(edges: Dict,
@@ -96,6 +106,9 @@ def train():
 
         # add concept net edges
         add_concept_net_edges(nodes=[node1_name, node2_name])
+    
+    # properly close the session
+    app.close()
 
 
 def main():
