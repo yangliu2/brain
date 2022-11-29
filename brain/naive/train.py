@@ -28,7 +28,6 @@ def add_concept_net_edges(nodes: List[str]):
                      f"All (y), Select(s), Manual Input(m), (exit) to quit\n"
                      f"{edges_display}\n>:")
 
-    
     # add relationships according to user choices
     if response in ['all', 'All', 'yes', 'y', 'YES']:
         # add all relationships
@@ -44,12 +43,12 @@ def add_concept_net_edges(nodes: List[str]):
         # manually add relationships
         while response != "exit":
             response = input("Please indicate relationship in the format "
-                            "<node1 name> <node1 type> <relationship> "
-                            "<node2> <node2 type>:\n")
-            
+                             "<node1 name> <node1 type> <relationship> "
+                             "<node2> <node2 type>:\n")
+
             if response == "exit":
                 break
-            
+
             node1_name, node1_type, edge, node2_name, node2_type = \
                 response.split(" ")
 
@@ -106,7 +105,7 @@ def train():
 
         # add concept net edges
         add_concept_net_edges(nodes=[node1_name, node2_name])
-    
+
     # properly close the session
     app.close()
 

@@ -385,8 +385,8 @@ class Neo4j:
 
     @staticmethod
     def _find_all_edge(tx,
-                       node1_type: str,
-                       node1_name: str) -> List[Dict]:
+                       node_type: str,
+                       node_name: str) -> List[Dict]:
         """Actually find the relationship in a transaction function 
 
         :param tx: the transaction function
@@ -398,18 +398,33 @@ class Neo4j:
         :return: List of dict 
         :rtype: List of Dict
         """
-        # get all relationships originated to the node
-        query = (
-            f"MATCH(n1: {node1_type} {{name: '{node1_name}'}})-[r]->(n2) "
-            f"RETURN n1, r, n2"
-        )
-        result1 = tx.run(query)
+        if node_type:
+            # get all relationships originated to the node
+            query = (
+                f"MATCH(n1: {node_type} {{name: '{node_name}'}})-[r]->(n2) "
+                f"RETURN n1, r, n2"
+            )
+            result1 = tx.run(query)
 
-        # get all relationships directed towards the node
-        query = (
-            f"MATCH(n1)-[r]->(n2:{node1_type} {{name: '{node1_name}'}}) "
-            f"RETURN n1, r, n2"
-        )
+            # get all relationships directed towards the node
+            query = (
+                f"MATCH(n1)-[r]->(n2:{node_type} {{name: '{node_name}'}}) "
+                f"RETURN n1, r, n2"
+            )
+        else:
+            # get all relationships originated to the node
+            query = (
+                f"MATCH(n1 {{name: '{node_name}'}})-[r]->(n2) "
+                f"RETURN n1, r, n2"
+            )
+            result1 = tx.run(query)
+
+            # get all relationships directed towards the node
+            query = (
+                f"MATCH(n1)-[r]->(n2 {{name: '{node_name}'}}) "
+                f"RETURN n1, r, n2"
+            )
+
         result2 = tx.run(query)
 
         try:
@@ -431,8 +446,8 @@ class Neo4j:
             raise
 
     def find_node(self,
-                  node_type: str,
-                  node_name: str) -> List[str]:
+                  node_name: str,
+                  node_type: str = None) -> List[str]:
         """Find the node in neo4j database and indicate whether it's found.
 
         :param node_type: type of node
@@ -467,11 +482,18 @@ class Neo4j:
         :return: List of str
         :rtype: List of str
         """
-        query = (
-            f"MATCH (p:{node_type}) "
-            f"WHERE p.name = $node_name "
-            f"RETURN p.name AS name"
-        )
+        if node_type:
+            query = (
+                f"MATCH (p:{node_type}) "
+                f"WHERE p.name = $node_name "
+                f"RETURN p.name AS name"
+            )
+        else:
+            query = (
+                f"MATCH (p) "
+                f"WHERE p.name = $node_name "
+                f"RETURN p.name AS name"
+            )
         result = tx.run(query,
                         node_name=node_name)
         try:

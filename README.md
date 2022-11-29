@@ -6,13 +6,14 @@ knowledge.
 
 ## List of tools:
 * concept_net - Find relationship between two concepts
-* data - Accessing MySQL database
+* database - Accessing MySQL database
 * scrape - Early tool for scraping the websites
 * wiki - Use wikipedia database for concepts
+* neo4j (naive) - database that saves edges that connects edges
 
 # Sources:
 ## Learning about ML
-Website: https://virgili0.github.io/  
+Website: https://virgili0.github.io/  (no longer works)
 * ML learn to perform task from data, rather than through programming. 
 * AI takes in information, process it, and interact with the world (actuators)
 * Problem with ML right now is that it can only "learn" from previous data. 

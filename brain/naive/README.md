@@ -28,9 +28,6 @@ nodes already exists using `Neo4j.find_relationship`.
 Check and make sure the type of nodes belongs to a specific list. If it 
 doesn't, then find the closest choice to reduce duplicate types. 
 
-Make the adding manual relationship from concept net flows better. Make sure
-it doesn't quit again after 1 manual addition.
-
 # Export data from cloud database
 Use the following command in the web query to get json lines generated. Then
 copy the json lines as the export.  

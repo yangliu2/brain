@@ -14,10 +14,16 @@ def test():
         if response == "exit":
             break
 
-        node_name, node_type, = response.split(" ")
-
-        edges = app.find_all_edge(node_type=node_type,
-                                  node_name=node_name)
+        response_fields = response.split(" ")
+        if len(response_fields) == 2:
+            node_name, node_type = response_fields
+            edges = app.find_all_edge(node_type=node_type,
+                                      node_name=node_name)
+        elif len(response_fields) == 1:
+            (node_name,) = response_fields
+            node_type = None
+            edges = app.find_all_edge(node_type=node_type,
+                                      node_name=node_name)
         utils.display_edge(edges=edges)
 
 

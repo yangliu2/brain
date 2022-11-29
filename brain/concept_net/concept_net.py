@@ -16,6 +16,12 @@ class RelationTypesEnum(Enum):
     AT_LOCATION = "AtLocation"
     CAPABLE_OF = "CapableOf"
     USED_FOR = "UsedFor"
+    RECIEVES_ACTION = "ReceivesAction"
+    HAS_PROPERTY = "HasProperty"
+    CAUSE_DESIRE = "CausesDesire"
+    MOTIVATED_BY_GOAL = "MotivatedByGoal"
+    HAS_PREREQUISITE = "HasPrerequisite"
+    HAS_SUBEVENT = "HasSubevent"
     
 
 class Neo4jTypesEnum(Enum):
@@ -28,6 +34,12 @@ class Neo4jTypesEnum(Enum):
     AT_LOCATION = "AT_LOCATION"
     CAPABLE_OF = "CAPABLE_OF"
     USED_FOR = "USED_FOR"
+    RECIEVES_ACTION = "RECIEVES_ACTION"
+    HAS_PROPERTY = "HAS_PROPERTY"
+    CAUSE_DESIRE = "CAUSE_DESIRE"
+    MOTIVATED_BY_GOAL = "MOTIVATED_BY_GOAL"
+    HAS_PREREQUISITE = "HAS_PREREQUISITE"
+    HAS_SUBEVENT = "HAS_SUBEVENT"
 
 
 @dataclass
@@ -73,6 +85,24 @@ class ConceptNet():
                      'n2': edge['end']['@id'].split('/')[-1]}
                      for edge in conceptnet_output['edges']
                      if edge['rel']['label'] in interested_list]
+        return relations
+
+    def display_edges(self,
+                      conceptnet_output: Dict) -> Dict:
+        """Format the Concept Net output according to the relationship we 
+        liked. This is selected in the Enums, but can be a config in the 
+        future. Start and end node used the @id url instead of the 'label'
+        because it's all in one word, so it's easier to neo4j storage. 
+
+        :param conceptnet_output: the dict output from Concept Net 
+        :type conceptnet_output: Dict
+        :return: The formated output after filter and selection. 
+        :rtype: Dict
+        """
+        relations = [{'n1': edge['start']['@id'].split('/')[-1],
+                     'r': edge['rel']['label'],
+                      'n2': edge['end']['@id'].split('/')[-1]}
+                     for edge in conceptnet_output['edges']]
         return relations
 
     @staticmethod
@@ -123,9 +153,9 @@ class ConceptNet():
 
 
 def main():
-    concept = ConceptNet(concept_name="leaf")
+    concept = ConceptNet(concept_name="poop")
     related = concept.get_concepts()
-    relations = concept.format_for_neo4j(conceptnet_output=related)
+    relations = concept.display_edges(conceptnet_output=related)
     pprint(relations)
 
 
