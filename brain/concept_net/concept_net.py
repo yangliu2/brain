@@ -4,6 +4,7 @@ from typing import List, Dict
 from pprint import pprint
 from dataclasses import dataclass
 from enum import Enum
+import argparse
 
 
 class RelationTypesEnum(Enum):
@@ -151,9 +152,20 @@ class ConceptNet():
                      for edge in obj['edges'] if 'surfaceText' in edge]
         return relations
 
+def get_args():
+    parser = argparse.ArgumentParser(description='Retrieve ConceptNet nodes')
+    parser.add_argument('-c', 
+                        '--concept_name',
+                        type=str,
+                        help='ConceptNet node')
+
+    args = parser.parse_args()
+    return args
+
 
 def main():
-    concept = ConceptNet(concept_name="poop")
+    args = get_args()
+    concept = ConceptNet(concept_name=args.concept_name)
     related = concept.get_concepts()
     relations = concept.display_edges(conceptnet_output=related)
     pprint(relations)
