@@ -1,5 +1,5 @@
 from neo4j import GraphDatabase
-import logging
+from loguru import logger
 from pathlib import Path
 from typing import List, Dict
 from brain.naive import utils
@@ -52,7 +52,7 @@ class Neo4j:
                 node_type,
                 node_name)
             for row in result:
-                logging.info(f"Created node {row['n']}")
+                logger.info(f"Created node {row['n']}")
 
     @staticmethod
     def _create_node(tx,
@@ -81,7 +81,7 @@ class Neo4j:
                     for row in result]
         # Capture any errors along with the query and data for traceability
         except ServiceUnavailable as exception:
-            logging.error(f"{query} raised an error: \n {exception}")
+            logger.error(f"{query} raised an error: \n {exception}")
             raise
 
     def create_edge(self,
@@ -135,7 +135,7 @@ class Neo4j:
                     node1_name,
                     node2_name)
                 for row in result:
-                    logging.info(f"Created {edge} between: "
+                    logger.info(f"Created {edge} between: "
                                  f"{row['n1']}, {row['n2']}")
         else:
             # get confidence and modify it if relationship exists
@@ -154,7 +154,7 @@ class Neo4j:
                     node2_name,
                     new_confidence)
                 for row in result:
-                    logging.info(f"Relationship {edge} was strenthened "
+                    logger.info(f"Relationship {edge} was strenthened "
                                  f"between {node1_name} and {node2_name}")
 
     @staticmethod
@@ -204,7 +204,7 @@ class Neo4j:
                     for row in result]
         # Capture any errors along with the query and data for traceability
         except ServiceUnavailable as exception:
-            logging.error(f"{query} raised an error: \n {exception}")
+            logger.error(f"{query} raised an error: \n {exception}")
             raise
 
     @staticmethod
@@ -266,7 +266,7 @@ class Neo4j:
                     for row in result]
         # Capture any errors along with the query and data for traceability
         except ServiceUnavailable as exception:
-            logging.error(f"{query} raised an error: \n {exception}")
+            logger.error(f"{query} raised an error: \n {exception}")
             raise
 
     def find_edge(self,
@@ -303,7 +303,7 @@ class Neo4j:
                 node1_name,
                 node2_name)
             for row in result:
-                logging.info(f"Found relationship({edge}) between: "
+                logger.info(f"Found relationship({edge}) between: "
                              f"{row['n1']}, {row['n2']}")
 
             # return relationships if found any
@@ -353,7 +353,7 @@ class Neo4j:
                     for row in result]
         # Capture any errors along with the query and data for traceability
         except ServiceUnavailable as exception:
-            logging.error(f"{query} raised an error: \n {exception}")
+            logger.error(f"{query} raised an error: \n {exception}")
             raise
 
     def find_all_edge(self,
@@ -377,7 +377,7 @@ class Neo4j:
                 node_type,
                 node_name)
             for row in result:
-                logging.info(f"Found relationship({row['r']}) between: "
+                logger.info(f"Found relationship({row['r']}) between: "
                              f"{row['n1']}, {row['n2']}")
 
             # return relationships if found any
@@ -442,7 +442,7 @@ class Neo4j:
             return all_results
         # Capture any errors along with the query and data for traceability
         except ServiceUnavailable as exception:
-            logging.error(f"{query} raised an error: \n {exception}")
+            logger.error(f"{query} raised an error: \n {exception}")
             raise
 
     def find_node(self,
@@ -463,7 +463,7 @@ class Neo4j:
                 node_type,
                 node_name)
             for row in result:
-                logging.info(f"Found node: {row}")
+                logger.info(f"Found node: {row}")
             # return node if found any
             return [row for row in result]
 
@@ -499,7 +499,7 @@ class Neo4j:
         try:
             return [row["name"] for row in result]
         except ServiceUnavailable as exception:
-            logging.error(f"{query} raised an error: \n {exception}")
+            logger.error(f"{query} raised an error: \n {exception}")
             raise
 
 
@@ -525,4 +525,5 @@ def main():
 
 
 if __name__ == "__main__":
+    logger.add("Neo4j.log")
     main()

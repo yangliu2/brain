@@ -1,7 +1,7 @@
 from brain.naive.neo4j_db import Neo4j
 from brain.concept_net.concept_net import ConceptNet
 from typing import List, Dict
-import logging
+from loguru import logger
 
 
 def add_concept_net_edges(nodes: List[str]):
@@ -115,7 +115,6 @@ def main():
 
 
 if __name__ == "__main__":
-    logging.basicConfig()
-    logging.getLogger().setLevel(logging.INFO)
+    logger.add("training.log")
     app = Neo4j()
     main()

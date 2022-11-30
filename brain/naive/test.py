@@ -1,5 +1,5 @@
 from brain.naive.neo4j_db import Neo4j
-import logging
+from loguru import logger
 from brain.naive import utils
 
 
@@ -32,6 +32,5 @@ def main():
 
 
 if __name__ == "__main__":
-    logging.basicConfig()
-    logging.getLogger().setLevel(logging.INFO)
+    logger.add("testing.log")
     main()
